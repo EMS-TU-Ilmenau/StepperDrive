@@ -9,7 +9,7 @@ Niklas Beuster -- niklas.beuster@tu-ilmenau.de
 The boards are breadboards (Lochrasterplatinen), so the **PCB is not for etching**, but soldering wires on a grid.
 
 #### Controller board
-<img src="Docs/Controller_Schematic.png" alt="Controller schematic" style="width: 49%;"/><img src="Docs/Controller_PCB.png" alt="Controller PCB" style="width: 49%;"/>
+![](Docs/Controller_Schematic.png) | ![](Docs/Controller_PCB.png)
 
 The board consist mainly of a [A4988](https://www.pololu.com/file/download/a4988_DMOS_microstepping_driver_with_translator.pdf?file_id=0J450) [module](https://eckstein-shop.de/A4988-StepStick-Compatible-Stepper-Motor-Driver-fuer-3D-Printer) (often used in DIY 3D printers) and an [ATtiny841](http://www.atmel.com/Images/Atmel-8495-8-bit-AVR-Microcontrollers-ATtiny441-ATtiny841_Datasheet.pdf) microcontroller.
 Supply voltage (VMOT = +12V) and UART signals are delivered via a RJ45 plug.
@@ -17,7 +17,7 @@ Supply voltage (VMOT = +12V) and UART signals are delivered via a RJ45 plug.
 Note that MS3 cannot be connected to PB3 because PB3 is the reset pin (setting to low is not possible when not configured explicitly as an GPIO pin, and this would make re-flashing more difficulty).
 
 #### Hub
-<img src="Docs/Hub_Schematic.png" alt="Hub schematic" style="width: 49%;"/><img src="Docs/Hub_PCB.png" alt="Hub PCB" style="width: 49%;"/>
+![](Docs/Hub_Schematic.png) | ![](Docs/Hub_PCB.png)
 
 The hub can distribute power and UART signals to each controller board.
 It was tested with up to 4 motors and a cable length of 10m and it worked without problems.
