@@ -1,6 +1,5 @@
 #include <avr/io.h> // for pin definitions
 #include <stdint.h> // for shorter types
-#include <util/delay.h>	// for _delay_ms
 #include <avr/interrupt.h> // for sei(), cli() and ISR()
 #include <stdlib.h>	// for itoa, atoi
 #include <string.h>	// for string operations like cmp and cat
@@ -41,7 +40,6 @@ typedef struct {
 } pCtrl_t;
 
 // variables
-volatile uint8_t uartStrCount = 0;
 volatile char uartReceiveStr[UART_MAXSTRLEN] = "";
 char uartSendStr[UART_MAXSTRLEN] = "";
 volatile uint8_t gotUARTReq, gotControlReq = FALSE;
@@ -76,11 +74,11 @@ ISR(TIMER0_COMPA_vect) {
 
 ISR(USART0_RX_vect) {
 	// receiving chars via UART Rx
+	static uint8_t uartStrCount = 0;
 	char nextChar = UDR0;
     if (nextChar != '\n' && nextChar != '\r' && uartStrCount < UART_MAXSTRLEN) {
     	// still getting valid chars
-		uartReceiveStr[uartStrCount] = nextChar;
-		uartStrCount++;
+		uartReceiveStr[uartStrCount++] = nextChar;
     } else {
     	// end of string
 		uartReceiveStr[uartStrCount] = '\0';
@@ -355,7 +353,8 @@ void ParseCommand(const char* strP) {
 		}
 	} else {
 		// no axis specific command
-		if (strncmp(strP, "*IDN?", 5) == 0) {
+		cmdP = strstr(strP, "*IDN?");
+		if (cmdP) {
 			// requested for device name
 			USART0_SendString(CMD_ID);
 		}
