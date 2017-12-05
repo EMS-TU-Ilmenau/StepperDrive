@@ -79,7 +79,8 @@ ISR(USART0_RX_vect) {
 	char nextChar = UDR0;
     if (nextChar != '\n' && nextChar != '\r' && uartStrCount < UART_MAXSTRLEN) {
     	// still getting valid chars
-		uartReceiveStr[uartStrCount++] = nextChar;
+		uartReceiveStr[uartStrCount] = nextChar;
+		uartStrCount++;
     } else {
     	// end of string
 		uartReceiveStr[uartStrCount] = '\0';
@@ -356,9 +357,7 @@ void ParseCommand(const char* strP) {
 		// no axis specific command
 		if (strncmp(strP, "*IDN?", 5) == 0) {
 			// requested for device name
-			strcpy(uartSendStr, "Controller ");
-			strcat(uartSendStr, CMD_ID);
-			USART0_SendString(uartSendStr);
+			USART0_SendString(CMD_ID);
 		}
 	}
 }
