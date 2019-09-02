@@ -324,6 +324,14 @@ void ParseCommand(const char* strP) {
 				substeps = ParseNum(cmdP);
 				SetSubsteps(substeps);
 			}
+		} else if (strncmp(cmdP, "RATE", 4) == 0) {
+			// rate (shorthand for LIM:MAX)
+			cmdP += 4;
+			if (*cmdP == '?') {
+				SendStepsAsDeg(maxStepRate);
+			} else {
+				maxStepRate = DegStrToSteps(cmdP);
+			}
 		} else if (strncmp(cmdP, "LIM", 3) == 0) {
 			// rate limit
 			cmdP += 4; // skip "LIM:"
