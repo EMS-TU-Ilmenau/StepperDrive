@@ -2,9 +2,6 @@
 This embedded project features a simple controller board for a stepper motor and a hub to connect one or multiple of these boards.
 Each motor can then be controlled with simple SCPI-like commands via UART (8N1 9600baud) to move to a position, set the maximum rate and acceleration etc.
 
-### Author
-Niklas Beuster -- niklas.beuster@tu-ilmenau.de
-
 ## Hardware
 The boards are breadboards (Lochrasterplatinen), so the **PCB is not for etching**, but soldering wires on a grid.
 
@@ -59,7 +56,9 @@ Commands are case-sensitive (all capital letters).
 - `:LIM:MAX` [positive float or integer] Upper speed limit in degree/s. Note: do not set higher than `8000*360/(substeps*steps_per_revolution)` (steps per revolution is set the in makefile and is 200 for most motors). Default 360.
 - `:LIM:MIN` [positive float or integer] Lower speed limit in degree/s. Note: do not set to 0. Default 10.
 
-## How to programm
+## How to program
 The firmware is written in C using [AVR-GCC](https://www.mikrocontroller.net/articles/AVR-GCC).
 In the [makefile](Makefile) line `PROGRAMMER = -c stk500 -P /dev/cu.SLAB_USBtoUART`, you can specify your programmer (`-c`) which must be known to [avrdude](http://www.nongnu.org/avrdude/user-manual/avrdude_4.html) and the port (`-P`) where you connect the programmer to your computer.
 I used the [mySmartUSB light](http://shop.myavr.de/index.php?sp=article.sp.php&artID=200006) programmer which is compatible to a stk500.
+When flashing, specify the axis identifier, e.g. for axis 3, run `make ID=3`.
+Remember to also flash the fuses, so the microcontroller runs with 8 MHz: `make fuse`.
