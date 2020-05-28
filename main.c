@@ -389,8 +389,8 @@ void SetSubsteps(uint8_t ss) {
 
 void GPIO_Init() {
 	// output pins
-	DDRA = (1 << PIN_ENABLE) | (1 << PIN_SS1) | (1 << PIN_LED);
-	DDRB = (1 << PIN_SS2) | (1 << PIN_SS3) | (1 << PIN_STEP) | (1 << PIN_DIR);
+	DDRA = (1 << PIN_ENABLE) | (1 << PIN_SS1) | (1 << PIN_SS3) | (1 << PIN_LED);
+	DDRB = (1 << PIN_SS2) | (1 << PIN_STEP) | (1 << PIN_DIR);
 	// disable motor (low active)
 	PORTA |= (1 << PIN_ENABLE);
 	// pull-up on input pins
