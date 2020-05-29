@@ -34,7 +34,7 @@ The string length must not exceed 64 chars in total (could be raised probably, n
 The commands have to be send with 9600 baud, 8 byte, no parity and 1 stop bit (8N1).
 
 At the moment, only one command is parsed for each axis at a time, i.e. it is not possible to set the rate and position for a motor in one string.
-However, it is possible to send a command to each motor simultaneously, by separating the commands with semicolons.
+However, it is possible to send one command to each motor simultaneously, by separating the commands with semicolons.
 You can send commands and receive replies while the motor is moving, e.g. you can set a new position - the motor will instantly move to that position even it has not reached its last target position.
 
 All commands must begin with `AX`, followed by the axis identifier number as specified when the microcontroller was programmed using the makefile. E.g. for `make ID=3` the axis identifier is `AX3`.
@@ -42,19 +42,20 @@ If you forgot the ID, you can query it (works only when 1 controller board is co
 Note that you cannot set the ID via commands.
 
 All parameters and subparameters have to be separated with a colon (`:`), followed by either a query (`?`) or the value.
-E.g. `AX1:POS?`, `AX4:POW ON`, `AX2:LIM:MAX 360`, `AX3:SUB2`.
+E.g. `AX1:POS?`, `AX4:POW ON`, `AX2:LIM:MAX 360` or `AX3:SUB2`.
 Note that the questionmark must follow immediately, while a value can have a leading white space (not required though).
 
 Commands are case-sensitive (all capital letters).
 
 #### List of commands
 - `:POW` [`ON` or `OFF`] Motor power on or off. Probably the first thing you do is to turn the power on. Default `OFF`.
-- `:KP` [positive integer] Control-loop constant. This controls how smooth the movement to a target position is (no symmetrical acceleration and decceleration though). A value of `1` is very smooth, while `100` is like constante rate. Default is `10`.
+- `:ACC` [positive integer] Acceleration factor. This controls how smooth the movement to a target position starts. A value of `1` is very smooth, while `100` is like constante rate. Default is `100`.
+- `:DEC` [positive integer] Decceleration factor. This controls how smooth the movement to a target position ends. A value of `1` is very smooth, while `100` is like constante rate. Default is `10`.
 - `:HOME` [integer] Moves the motor into the direction given by the sign of the value (e.g. `-1` or `1`) until the home sense pin goes low or the axis made 100 rounds. After that, the position is defined as 0 degree. When requested, the reply is either `1` (at home) or `0` not homed/homing in progress.
 - `:POS` [float or integer] Axis position (angle) in degree.
 - `:LIM:MAX` [positive float or integer] Upper speed limit in degree/s. Must not be set higher than `8000*360/(substeps*steps_per_revolution)` (steps per revolution is set the in makefile and is 200 for most motors). Default 360.
 - `:LIM:MIN` [positive float or integer] Lower speed limit in degree/s. Must not be set to 0. Default 10.
-- `:SUB` [`1`, `2`, `4`, `8` or `16`] Number of substeps. Higher values will result in finer resolution and smoother movements, but also reduced torque and lower maximum rate. Default is `4`. **Note:** Set the substeps before setting or getting any parameter with degree related unit.
+- `:SUB` [`1`, `2`, `4`, `8` or `16`] Number of substeps. Higher values will result in finer resolution and smoother movements, but also reduced torque and lower maximum rate. Default is `4`. **Important:** Set the substeps before setting or getting any parameter with degree related unit.
 
 ## How to program
 The firmware is written in C using [AVR-GCC](https://www.mikrocontroller.net/articles/AVR-GCC).

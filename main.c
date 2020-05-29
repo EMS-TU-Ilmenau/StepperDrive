@@ -1,71 +1,9 @@
 #include <avr/io.h> // for pin definitions
-#include <stdint.h> // for shorter types
+#include <stdint.h> // for data types
 #include <avr/interrupt.h> // for sei(), cli() and ISR()
 #include <stdlib.h>	// for itoa, atoi
 #include <string.h>	// for string operations like cmp and cat
-
-// define macros and constants
-#define STR_HELPER(x) #x
-#define STR(x) STR_HELPER(x)
-#define TRUE 1
-#define FALSE 0
-#define HOME_OFF 0 // homing states
-#define HOME_SEARCH 1
-#define HOME_FOUND 2
-#define HOME_ON 3
-#define UART_BAUD 9600UL
-#define UART_UBRR (F_CPU/(8*UART_BAUD)-1) // calculate register value for baudrate for U2Xn = 1
-#define UART_MAXSTRLEN 64
-#define RADIX 10 // for itoa
-#define F_TINT 8000 // timer interrupt frequency
-#define C_PRESC 64 // control frequency that much slower than F_TINT
-#define CMD_ID "AX" STR(AX_ID) // axis specific commands must start with AX<id>
-#define PIN_ENABLE PA6 // motor enable pin (low active)
-#define PIN_STEP PB1 // motor step pin
-#define PIN_DIR PB0 // motor direction pin
-#define PIN_LED PA0 // status or testing LED pin
-#define PIN_HOME PA4 // homing switch pin (low active)
-#define PIN_SS1 PA7 // substep bit 1
-#define PIN_SS2 PB2 // substep bit 2
-#define PIN_SS3 PA3 // substep bit 3
-
-// structs
-typedef struct {
-	// for a P control loop
-	int32_t tarStepPos;
-	int32_t curStepPos;
-	uint16_t tic;
-	uint16_t stepPeriod;
-	int8_t tarDir;
-} pCtrl_t;
-
-// variables
-volatile char uartReceiveStr[UART_MAXSTRLEN] = "";
-char uartSendStr[UART_MAXSTRLEN] = "";
-volatile uint8_t gotUARTReq, gotControlReq = FALSE;
-uint8_t substeps = 4; // num of microsteps which make 1 full step
-uint16_t maxStepRate, minStepRate; // step rate limits
-uint16_t kP = 10; // proportional control factor
-uint8_t homing = HOME_OFF; // homing state
-pCtrl_t P1;
-pCtrl_t P2;
-
-// prototypes
-void GPIO_Init();
-void USART0_Init();
-void USART0_SendChar(const char c);
-void USART0_SendString(const char* strP);
-void ParseCommand(const char* strP);
-void Timer0_Init();
-int32_t DegToSteps(int32_t deg);
-int32_t StepsToDeg(int32_t steps);
-int16_t ParseNum(const char* strP);
-void SendNum(int16_t num);
-void Control(pCtrl_t* ctrlP);
-void PhyStep(pCtrl_t* ctrlP);
-void SetSubsteps(uint8_t ss);
-int32_t DegStrToSteps(const char* strP);
-void SendStepsAsDeg(int32_t steps);
+#include "main.h" // for project specific definitions
 
 ISR(TIMER0_COMPA_vect) {
 	// timer 0 compare interrupt
@@ -106,30 +44,23 @@ int main() {
 			ParseCommand(bufCpyP);
 			gotUARTReq = FALSE;
 		}
-		// control loop step
+		// control loop
 		if (gotControlReq) {
 			static uint16_t tic = 0;
 			if (tic++ >= C_PRESC) {
-				// control steps
+				// perform control step
 				tic = 0;
-				Control(&P1);
-				Control(&P2);
+				Control(&ctrlState);
 			}
-			if (P1.tic++ >= P1.stepPeriod) {
-				// intermediate follow step
-				P1.tic = 0;
-				P1.curStepPos += P1.tarDir;
-				P2.tarStepPos = P1.curStepPos;
-			}
-			if (P2.tic++ >= P2.stepPeriod) {
-				// perform step physically here
-				P2.tic = 0;
-				PhyStep(&P2);
+			if (ctrlState.tic++ >= ctrlState.stepPeriod) {
+				// perform physical step
+				ctrlState.tic = 0;
+				PhyStep(&ctrlState);
 			}
 			gotControlReq = FALSE;
 		}
 		// show whether motor is on target position
-		if (P2.curStepPos != P1.tarStepPos) {
+		if (ctrlState.curStepPos != ctrlState.tarStepPos) {
 			PORTA |= (1 << PIN_LED);
 		} else {
 			PORTA &= ~(1 << PIN_LED);
@@ -137,16 +68,16 @@ int main() {
 				// homing settled
 				homing = HOME_ON;
 				// reset positions
-				P1.curStepPos = 0;
-				P1.tarStepPos = 0;
-				P2.curStepPos = 0;
-				P2.tarStepPos = 0;
+				ctrlState.curStepPos = 0;
+				ctrlState.tarStepPos = 0;
 			}
+			// get rested position
+			ctrlState.oldStepPos = ctrlState.curStepPos;
 		}
 		// check for home
 		if ((homing == HOME_SEARCH) && (!(PINA & (1 << PIN_HOME)))) {
 			// switch activated, remember home position
-			P1.tarStepPos = P2.curStepPos;
+			ctrlState.tarStepPos = ctrlState.curStepPos;
 			homing = HOME_FOUND;
 		}
 	}
@@ -155,24 +86,30 @@ int main() {
 
 void Control(pCtrl_t* ctrlP) {
 	// control loop step
-	int32_t v = kP*(ctrlP->tarStepPos - ctrlP->curStepPos);
+	int32_t tarVel = kDec*(ctrlP->tarStepPos - ctrlP->curStepPos);
+	int32_t oldVel = kAcc*(ctrlP->curStepPos - ctrlP->oldStepPos);
 	// sign
-	uint32_t stepRate;
-	if (v > 0) {
+	uint32_t tarRate;
+	uint32_t oldRate;
+	if (tarVel > 0) {
 		ctrlP->tarDir = 1;
-		stepRate = v;
-	} else if (v < 0) {
+		tarRate = tarVel;
+		oldRate = oldVel;
+	} else if (tarVel < 0) {
 		ctrlP->tarDir = -1;
-		stepRate = -v;
+		tarRate = -tarVel;
+		oldRate = -oldVel;
 	} else {
 		ctrlP->tarDir = 0;
-		stepRate = 0;
+		tarRate = 0;
+		oldRate = 0;
 	}
 	// limit rate
-	if (stepRate > maxStepRate) stepRate = maxStepRate;
-	if (stepRate < minStepRate) stepRate = minStepRate;
+	tarRate = (tarRate < oldRate) ? tarRate : oldRate; // choose acceleration or decceleration ramp
+	if (tarRate > maxStepRate) tarRate = maxStepRate;
+	if (tarRate < minStepRate) tarRate = minStepRate;
 	// update step period
-	ctrlP->stepPeriod = F_TINT/stepRate;
+	ctrlP->stepPeriod = F_TINT/tarRate;
 }
 
 inline void PhyStep(pCtrl_t* ctrlP) {
@@ -274,10 +211,9 @@ void ParseCommand(const char* strP) {
 				note: loosing power results in unknown state of the position, so reset it
 				Same goes when powering on because there is no absolute encoder
 				*/
-				P1.curStepPos = 0;
-				P1.tarStepPos = 0;
-				P2.curStepPos = 0;
-				P2.tarStepPos = 0;
+				ctrlState.curStepPos = 0;
+				ctrlState.tarStepPos = 0;
+				ctrlState.oldStepPos = 0;
 				homing = HOME_OFF;
 				cmdP += 2; // skip " O"
 				if (*cmdP == 'N') {
@@ -286,13 +222,21 @@ void ParseCommand(const char* strP) {
 					PORTA |= (1 << PIN_ENABLE); // disable
 				}
 			}
-		} else if (strncmp(cmdP, "KP", 2) == 0) {
-			// proportional control loop parameter
-			cmdP += 2;
+		} else if (strncmp(cmdP, "ACC", 3) == 0) {
+			// acceleration proportion
+			cmdP += 3;
 			if (*cmdP == '?') {
-				SendNum(kP);
+				SendNum(kAcc);
 			} else {
-				kP = ParseNum(cmdP);
+				kAcc = ParseNum(cmdP);
+			}
+		} else if (strncmp(cmdP, "DEC", 3) == 0) {
+			// decceleration proportion
+			cmdP += 3;
+			if (*cmdP == '?') {
+				SendNum(kDec);
+			} else {
+				kDec = ParseNum(cmdP);
 			}
 		} else if (strncmp(cmdP, "HOME", 4) == 0) {
 			// start homing
@@ -303,16 +247,16 @@ void ParseCommand(const char* strP) {
 			} else {
 				// set homing heading
 				int8_t homeDir = ParseNum(cmdP);
-				P1.tarStepPos = (homeDir > 0) ? DegToSteps(36000) : DegToSteps(-36000);
+				ctrlState.tarStepPos = (homeDir > 0) ? DegToSteps(36000) : DegToSteps(-36000);
 				homing = HOME_SEARCH;
 			}
 		} else if (strncmp(cmdP, "POS", 3) == 0) {
 			// target position
 			cmdP += 3;
 			if (*cmdP == '?') {
-				SendStepsAsDeg(P2.curStepPos);
+				SendStepsAsDeg(ctrlState.curStepPos);
 			} else {
-				P1.tarStepPos = DegStrToSteps(cmdP);
+				ctrlState.tarStepPos = DegStrToSteps(cmdP);
 				homing = HOME_OFF;
 			}
 		} else if (strncmp(cmdP, "SUB", 3) == 0) {
