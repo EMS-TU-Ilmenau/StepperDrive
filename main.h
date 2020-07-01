@@ -13,6 +13,7 @@
 #define UART_BAUD 9600UL
 #define UART_UBRR (F_CPU/(8*UART_BAUD)-1) // calculate register value for baudrate for U2Xn = 1
 #define UART_MAXSTRLEN 64
+#define STR_TERM '\n'
 #define RADIX 10 // for itoa
 #define F_TINT 8000 // timer interrupt frequency
 #define C_PRESC 64 // control frequency that much slower than F_TINT
@@ -38,9 +39,10 @@ typedef struct {
 } pCtrl_t;
 
 // variables
-volatile char uartReceiveStr[UART_MAXSTRLEN] = "";
+char uartReceiveStr[UART_MAXSTRLEN] = "";
 char uartSendStr[UART_MAXSTRLEN] = "";
-volatile uint8_t gotUARTReq, gotControlReq = FALSE;
+uint8_t gotCommand = FALSE;
+volatile uint8_t gotControlReq = FALSE;
 uint8_t substeps = 4; // num of microsteps which make 1 full step
 uint16_t maxStepRate, minStepRate; // step rate limits
 uint16_t kAcc = 100; // acceleration proportion
@@ -51,6 +53,7 @@ pCtrl_t ctrlState;
 // prototypes
 void GPIO_Init();
 void USART0_Init();
+void USART0_ReceiveChar();
 void USART0_SendChar(const char c);
 void USART0_SendString(const char* strP);
 void ParseCommand(const char* strP);

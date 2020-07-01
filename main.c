@@ -10,21 +10,6 @@ ISR(TIMER0_COMPA_vect) {
 	gotControlReq = TRUE;
 }
 
-ISR(USART0_RX_vect) {
-	// receiving chars via UART Rx
-	static uint8_t uartStrCount = 0;
-	char nextChar = UDR0;
-    if (nextChar != '\n' && nextChar != '\r' && uartStrCount < UART_MAXSTRLEN) {
-    	// still getting valid chars
-		uartReceiveStr[uartStrCount++] = nextChar;
-    } else {
-    	// end of string
-		uartReceiveStr[uartStrCount] = '\0';
-	  	uartStrCount = 0;
-		gotUARTReq = TRUE;
-    }
-}
-
 int main() {
 	// initialization
 	maxStepRate = DegToSteps(360);
@@ -36,13 +21,11 @@ int main() {
 	// starting infinity loop
 	while(TRUE) {
 		// waiting for instruction or query commands from the host
-		if (gotUARTReq) {
-			// copy usart string buffer because parsing takes a while
-			static char bufCpy[UART_MAXSTRLEN];
-			char* bufCpyP = strcpy(bufCpy, (char*)uartReceiveStr);
+		USART0_ReceiveChar();
+		if (gotCommand) {
 			// parse commands
-			ParseCommand(bufCpyP);
-			gotUARTReq = FALSE;
+			ParseCommand((char*)(uartReceiveStr));
+			gotCommand = FALSE;
 		}
 		// control loop
 		if (gotControlReq) {
@@ -181,6 +164,23 @@ void SendStepsAsDeg(int32_t steps) {
 	strcat(uartSendStr, fracDigs);
 	// send
 	USART0_SendString(uartSendStr);
+}
+
+inline void USART0_ReceiveChar() {
+	// collect newly arrived bytes
+	if (!(UCSR0A & (1 << RXC0))) return; // no new char received yet
+	// new char available
+	static uint8_t uartStrCount = 0;
+	char nextChar = UDR0;
+	if (nextChar != STR_TERM && uartStrCount < UART_MAXSTRLEN) {
+		// still getting valid chars
+		uartReceiveStr[uartStrCount++] = nextChar;
+	} else {
+		// end of string
+		uartReceiveStr[uartStrCount] = STR_TERM;
+	  	uartStrCount = 0;
+		gotCommand = TRUE;
+	}
 }
 
 inline void ParseCommand(const char* strP) {
@@ -353,8 +353,6 @@ void USART0_Init() {
 	UBRR0L = (uint8_t)UART_UBRR;
 	// enable receiver and transmitter pins
 	UCSR0B = (1 << RXEN0) | (1 << TXEN0);
-	// enable receiver interrupt
-	UCSR0B |= (1 << RXCIE0);
 	// frame format: 8N1 (is initially set anyway)
 	UCSR0C = (1 << UCSZ01) | (1 << UCSZ00);
 	// double speed because the error is too high (-7%) for baud 9600 without U2X
@@ -374,7 +372,6 @@ void USART0_SendString(const char* strP) {
 		USART0_SendChar(*strP);
 		strP++;
 	}
-	// append cr and lf
-	USART0_SendChar('\r');
-	USART0_SendChar('\n');
+	// append string termination
+	USART0_SendChar(STR_TERM);
 }
