@@ -138,12 +138,6 @@ int32_t StepsToDeg(int32_t steps) {
 	return steps*360/(substeps*FSTEP_REV);
 }
 
-int16_t ParseNum(const char* strP) {
-	// parses the string for a decimal number
-	char *nxt;
-	return strtol(strP, &nxt, RADIX);
-}
-
 void SendNum(int16_t num) {
 	// converts a decimal number to string and sends it over USART
 	itoa(num, uartSendStr, RADIX);
@@ -189,7 +183,7 @@ void SendStepsAsDeg(int32_t steps) {
 	USART0_SendString(uartSendStr);
 }
 
-void ParseCommand(const char* strP) {
+inline void ParseCommand(const char* strP) {
 	// parse command (SCPI style, but not protocol conform)
 	// search entry point: our axis with ID ("AX<ID>")
 	char* cmdP = strstr(strP, CMD_ID);
@@ -228,7 +222,7 @@ void ParseCommand(const char* strP) {
 			if (*cmdP == '?') {
 				SendNum(kAcc);
 			} else {
-				kAcc = ParseNum(cmdP);
+				kAcc = (uint16_t)(strtoul(cmdP, NULL, RADIX));
 			}
 		} else if (strncmp(cmdP, "DEC", 3) == 0) {
 			// decceleration proportion
@@ -236,7 +230,7 @@ void ParseCommand(const char* strP) {
 			if (*cmdP == '?') {
 				SendNum(kDec);
 			} else {
-				kDec = ParseNum(cmdP);
+				kDec = (uint16_t)(strtoul(cmdP, NULL, RADIX));
 			}
 		} else if (strncmp(cmdP, "HOME", 4) == 0) {
 			// start homing
@@ -246,7 +240,7 @@ void ParseCommand(const char* strP) {
 				SendNum((homing == HOME_ON) ? 1 : 0);
 			} else {
 				// set homing heading
-				int8_t homeDir = ParseNum(cmdP);
+				int8_t homeDir = (int8_t)(strtol(cmdP, NULL, RADIX));
 				ctrlState.tarStepPos = (homeDir > 0) ? DegToSteps(36000) : DegToSteps(-36000);
 				homing = HOME_SEARCH;
 			}
@@ -265,7 +259,7 @@ void ParseCommand(const char* strP) {
 			if (*cmdP == '?') {
 				SendNum(substeps);
 			} else {
-				substeps = ParseNum(cmdP);
+				substeps = (uint8_t)(strtoul(cmdP, NULL, RADIX));
 				SetSubsteps(substeps);
 			}
 		} else if (strncmp(cmdP, "RATE", 4) == 0) {

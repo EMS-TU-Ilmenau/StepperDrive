@@ -57,7 +57,6 @@ void ParseCommand(const char* strP);
 void Timer0_Init();
 int32_t DegToSteps(int32_t deg);
 int32_t StepsToDeg(int32_t steps);
-int16_t ParseNum(const char* strP);
 void SendNum(int16_t num);
 void Control(pCtrl_t* ctrlP);
 void PhyStep(pCtrl_t* ctrlP);
