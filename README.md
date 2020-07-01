@@ -29,7 +29,7 @@ Sending commands can be even done simultaneously, e.g. `AX1:POS 180;AX2:POS 22.5
 
 ## Commands
 #### Common rules
-Commands are simple ascii strings (no binary shenanigans, so human readable), terminated with `\r` and/or `\n`.
+Commands are simple ascii strings (no binary shenanigans, so human readable), terminated with `\n` (linefeed).
 The string length must not exceed 64 chars in total (could be raised probably, not tested).
 The commands have to be send with 9600 baud, 8 byte, no parity and 1 stop bit (8N1).
 
