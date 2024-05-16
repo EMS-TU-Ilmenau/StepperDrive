@@ -297,6 +297,11 @@ inline void ParseCommand(const char* strP) {
 			strcat(uartSendStr, cmdP);
 			USART0_SendString(uartSendStr);
 		}
+		// query operation complete
+		cmdP = strstr(cmdP, "*OPC?");
+		if (cmdP) {
+			sendUARTString("1");
+		}
 	} else {
 		// no axis specific command
 		cmdP = strstr(strP, "*IDN?");

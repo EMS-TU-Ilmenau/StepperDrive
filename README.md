@@ -44,6 +44,7 @@ Note that you cannot set the ID via commands.
 All parameters and subparameters have to be separated with a colon (`:`), followed by either a query (`?`) or the value.
 E.g. `AX1:POS?`, `AX4:POW ON`, `AX2:LIM:MAX 360` or `AX3:SUB2`.
 Note that the questionmark must follow immediately, while a value can have a leading white space (not required though).
+When setting a parameter, it is possible to add `;*OPC?` afterwards to get feedback (`1` is returned) when the operation completed.
 
 Commands are case-sensitive (all capital letters).
 
