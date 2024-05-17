@@ -23,26 +23,32 @@ ISR(USART0_RXC_vect) {
 }
 
 int main() {
-	// setup
-	configClock();
-	configGPIO();
-	configUART();
-	configTCA();
-	sei();
-
 	// init
 	maxStepRate = degToSteps(360);
 	minStepRate = degToSteps(10);
 	
 	// read axis ID
-	_delay_ms(200); // let voltage stabilize, otherwise eeprom read is corrupted
-	uint8_t storedID = eeprom_read_byte(&eAxisIDAddr);
+	uint8_t oldID = 0;
+	uint8_t storedID;
+	for (uint8_t nTries = 3; nTries > 0; nTries--) {
+		_delay_ms(50); // let voltage stabilize, otherwise eeprom read is corrupted
+		storedID = eeprom_read_byte(&eAxisIDAddr);
+		if ((oldID != 0) && (storedID == oldID)) break;
+		oldID = storedID;
+	}
 	if ((storedID < 48) || (storedID > 57)) {
 		// initially store ID from default command string
 		storedID = cmdID[2];
 		eeprom_write_byte(&eAxisIDAddr, storedID);
 	}
 	cmdID[2] = storedID;
+
+	// setup
+	configClock();
+	configGPIO();
+	configUART();
+	configTCA();
+	sei();
 	
 	// main program loop
 	while (TRUE) {
@@ -96,7 +102,11 @@ void parseCommand(const char* strP) {
 			uint8_t id = *cmdP;
 			if ((id >= 48) && (id <= 57)) {
 				cmdID[2] = id;
-				eeprom_update_byte(&eAxisIDAddr, id);
+				for (uint8_t nTries = 3; nTries > 0; nTries--) {
+					eeprom_update_byte(&eAxisIDAddr, id);
+					uint8_t storedID = eeprom_read_byte(&eAxisIDAddr);
+					if (storedID == id) break;
+				}
 			}
 		} else if (strncmp(cmdP, "POW", 3) == 0) {
 			// enable/disable power

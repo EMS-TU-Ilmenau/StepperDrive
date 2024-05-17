@@ -2,7 +2,8 @@ TARGET = project
 MCU = attiny814
 SOURCES = main.c
 OBJECTS = $(SOURCES:.c=.o)
-CLOCK = 10000000 # clock must be configured in main.c accordingly
+# clock must be configured in main.c accordingly
+CLOCK = 10000000
 
 COMPILE = avr-gcc -Wall -Os -DF_CPU=$(CLOCK) -mmcu=$(MCU)
 
