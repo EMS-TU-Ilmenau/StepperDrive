@@ -23,6 +23,9 @@ ISR(USART0_RXC_vect) {
 }
 
 int main() {
+	// setup
+	configClock();
+
 	// init
 	maxStepRate = degToSteps(360);
 	minStepRate = degToSteps(10);
@@ -43,8 +46,7 @@ int main() {
 	}
 	cmdID[2] = storedID;
 
-	// setup
-	configClock();
+	// continue setup
 	configGPIO();
 	configUART();
 	configTCA();

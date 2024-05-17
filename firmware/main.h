@@ -42,7 +42,7 @@ enum mode {
 };
 
 // variables
-char uartRecvStr[UART_MAXSTRLEN] = "";
+volatile char uartRecvStr[UART_MAXSTRLEN] = "";
 char uartSendStr[UART_MAXSTRLEN] = "";
 char cmdID[] = "AX1"; // axis specific commands must start with AX<id>
 uint8_t EEMEM eAxisIDAddr; // address pointer for axis ID stored in eeprom
