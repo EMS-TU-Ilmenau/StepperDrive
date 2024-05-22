@@ -317,7 +317,11 @@ int32_t degStrToSteps(const char* strP) {
 			nxt++;
 			char c = *nxt;
 			if ((c >= 48) && (c <= 57)) {
-				num = num*10 + (num > 0) ? (c-48) : (-(c-48));
+				if (num > 0) {
+					num = num*10 + c-48;
+				} else {
+					num = num*10 - (c-48);
+				}
 			} else {
 				num = num*10;
 			}
