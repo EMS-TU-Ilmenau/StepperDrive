@@ -31,14 +31,8 @@ int main() {
 	minStepRate = degToSteps(10);
 	
 	// read axis ID
-	uint8_t oldID = 0;
-	uint8_t storedID;
-	for (uint8_t nTries = 3; nTries > 0; nTries--) {
-		_delay_ms(50); // let voltage stabilize, otherwise eeprom read is corrupted
-		storedID = eeprom_read_byte(&eAxisIDAddr);
-		if ((oldID != 0) && (storedID == oldID)) break;
-		oldID = storedID;
-	}
+	_delay_ms(100); // let voltage stabilize, otherwise eeprom read is corrupted
+	uint8_t storedID = eeprom_read_byte(&eAxisIDAddr);
 	if ((storedID < 48) || (storedID > 57)) {
 		// initially store ID from default command string
 		storedID = cmdID[2];
@@ -319,11 +313,11 @@ int32_t degStrToSteps(const char* strP) {
 		// float detected
 		// get 2 fractional digits
 		uint8_t i;
-		for (i=0; i<2; i++) {
+		for (i = 0; i < 2; i++) {
 			nxt++;
 			char c = *nxt;
 			if ((c >= 48) && (c <= 57)) {
-				num = num*10+c-48;
+				num = num*10 + (num > 0) ? (c-48) : (-(c-48));
 			} else {
 				num = num*10;
 			}
